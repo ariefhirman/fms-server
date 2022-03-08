@@ -1,8 +1,12 @@
 const express = require("express");
+const app = express();
+const httpServer = require("http").createServer(app);
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const io = require('socket.io')(httpServer);
+
+const service = require('./src/service/conn');
 const dbConfig = require("./src/config/db.config");
-const app = express();
 const multer = require("multer");
 const path = require("path");
 const fs = require('fs-extra');
@@ -16,113 +20,127 @@ var corsOptions = {
   preflightContinue: true,
   maxAge: 600
 };
-app.options('*', cors(corsOptions));
 
-app.use(express.static('public'))
-app.use(cors(corsOptions));
+var sock = null;
 
-// parse requests of content-type - application/json
-app.use(bodyParser.json());
+function startServer() {
+  app.options('*', cors(corsOptions));
 
-// parse requests of content-type - application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: true }));
+  app.use(express.static('public'))
+  app.use(cors(corsOptions));
 
-const db = require("./src/models");
+  // parse requests of content-type - application/json
+  app.use(bodyParser.json());
 
-// db.mongoose
-//   .connect(path, {
-//     useNewUrlParser: true,
-//     useUnifiedTopology: true
-//   })
-//   .then(() => {
-//     console.log("Successfully connect to MongoDB.");
-//     initial();
-//   })
-//   .catch(err => {
-//     console.error("Connection error", err);
-//     process.exit();
-//   });
+  // parse requests of content-type - application/x-www-form-urlencoded
+  app.use(bodyParser.urlencoded({ extended: true }));
 
-db.mongoose
-.connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => {
-  console.log("Successfully connect to MongoDB.");
-})
-.catch(err => {
-  console.error("Connection error", err);
-  process.exit();
-});
+  const db = require("./src/models");
 
-const storage = multer.diskStorage({
-  destination: function(req, file, callback) {
-    callback(null, './uploads');
-  },
-  filename: function (req, file, callback) {
-    callback(null, file.originalname);
-    // + path.extname(file.originalname)
-  }
-});
+  // db.mongoose
+  //   .connect(path, {
+  //     useNewUrlParser: true,
+  //     useUnifiedTopology: true
+  //   })
+  //   .then(() => {
+  //     console.log("Successfully connect to MongoDB.");
+  //     initial();
+  //   })
+  //   .catch(err => {
+  //     console.error("Connection error", err);
+  //     process.exit();
+  //   });
 
-var upload = multer({ 
-    storage: storage
-})
+  db.mongoose
+  .connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
+  .then(() => {
+    console.log("Successfully connect to MongoDB.");
+  })
+  .catch(err => {
+    console.error("Connection error", err);
+    process.exit();
+  });
 
-app.post('/api/v1/upload', upload.single('file'), (req, res) => {
-  if (!req.file) {
-    console.log("No file received");
-    return res.send({
-      success: false
-    });
+  const storage = multer.diskStorage({
+    destination: function(req, file, callback) {
+      callback(null, './uploads');
+    },
+    filename: function (req, file, callback) {
+      callback(null, file.originalname);
+      // + path.extname(file.originalname)
+    }
+  });
 
-  } else {
-    let date = getDateNow();
-    var fileName = req.file.filename;
-    const filesDir = './public/images/' + req.body.racks + '/' + date;
-    // console.log('file received');
-    
-    if (fs.existsSync(filesDir + '/' + fileName)) {
-      fs.unlink(filesDir + '/' + fileName, (err) => {
+  var upload = multer({ 
+      storage: storage
+  })
+
+  app.post('/api/v1/upload', upload.single('file'), (req, res) => {
+    if (!req.file) {
+      console.log("No file received");
+      return res.send({
+        success: false
+      });
+
+    } else {
+      let date = getDateNow();
+      var fileName = req.file.filename;
+      const filesDir = './public/images/' + req.body.racks + '/' + date;
+      // console.log('file received');
+      
+      if (fs.existsSync(filesDir + '/' + fileName)) {
+        fs.unlink(filesDir + '/' + fileName, (err) => {
+            if (err) {
+                console.log(err);
+                return res.send({
+                  success: false,
+                  error: err
+                })
+            }
+            // console.log('deleted');
+        })
+      }
+      
+      fs.move('./uploads/' + fileName, filesDir + '/' + fileName, function (err) {
           if (err) {
-              console.log(err);
-              return res.send({
-                success: false,
-                error: err
-              })
+              return console.error(err);
           }
-          // console.log('deleted');
+      });
+      return res.send({
+        success: true
       })
     }
-    
-    fs.move('./uploads/' + fileName, filesDir + '/' + fileName, function (err) {
-        if (err) {
-            return console.error(err);
-        }
-    });
-    return res.send({
-      success: true
-    })
-  }
-});
+  });
 
-// simple route
-app.get("/", (req, res) => {
-  res.json({ message: "Testing for User JWT API." });
-});
+  // simple route
+  app.get("/", (req, res) => {
+    res.json({ message: "Testing for User JWT API." });
+  });
 
-app.use('/static', express.static('public'))
+  app.use('/static', express.static('public'))
 
-require('./src/routes/auth.routes')(app);
-require('./src/routes/detection.routes')(app);
-require('./src/routes/mission.routes')(app);
+  require('./src/routes/auth.routes')(app);
+  require('./src/routes/detection.routes')(app);
+  require('./src/routes/mission.routes')(app);
 
-// set port, listen for requests
-const PORT = process.env.PORT || 6868;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}.`);
-});
+  // socket.io
+  io.on('connection', function(socket){
+    sock = socket;
+    console.log('socket connected');
+  });
+
+  // start RabbitMQ and Socket service
+  service.startService(sock);
+
+  // set port, listen for requests
+  const PORT = process.env.PORT || 6868;
+  httpServer.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}.`);
+  });
+}
 
 function getDateNow() {
   let today = new Date();
@@ -142,3 +160,5 @@ function getDateNow() {
 
   return dd + '-' + mm + '-' + yyyy
 }
+
+startServer();
