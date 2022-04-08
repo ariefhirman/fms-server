@@ -30,7 +30,7 @@ module.exports = {
             fnFinish();
         });
     },
-    StartConsumer: (queue, fnConsumer) => {
+    StartConsumerDirect: (getDroneConsumer, exchange) => {
         // Create a channel for queue
         amqpConn.createChannel(function(err, ch) {
             if (closeOnErr(err)) return;
@@ -45,16 +45,63 @@ module.exports = {
 
             // Set prefetch value
             ch.prefetch(10);
-            ch.assertQueue(queue, { durable: true }, function(err, _ok) {
+            ch.assertExchange(exchange, "direct", {
+                durable: false
+            });
+            ch.assertQueue("drone_name", { durable: true }, function(err, q) {
                 if (closeOnErr(err)) return;
                 // Consume incoming messages
-                ch.consume(queue, processMsg, { noAck: false });
+                ch.bindQueue("drone_name", exchange, "drone_name");
+                ch.consume("drone_name", processMsg, { noAck: false });
+                // socket.emit("message", processMsg);
                 console.log("[AMQP] Worker is started");
             });
             function processMsg(msg) {
                 // Process incoming messages and send them to fnConsumer
                 // Here we need to send a callback(true) for acknowledge the message or callback(false) for reject them
-                
+                console.log(msg.content.toString());
+                // io.emit(socketChannel, msg.content.toString());
+                getDroneConsumer(msg, function(ok) {
+                    try {
+                        ok ? ch.ack(msg) : ch.reject(msg, true);
+                    } catch (e) {
+                        closeOnErr(e);
+                    }
+                });
+            }
+        });
+    },
+    StartConsumer: (queue, fnConsumer, io, socketChannel, exchange) => {
+        // Create a channel for queue
+        amqpConn.createChannel(function(err, ch) {
+            if (closeOnErr(err)) return;
+
+            ch.on("error", function(err) {
+                console.error("[AMQP] channel error", err.message);
+            });
+
+            ch.on("close", function() {
+                console.log("[AMQP] channel closed");
+            });
+
+            // Set prefetch value
+            ch.prefetch(10);
+            ch.assertExchange(exchange, 'topic', {
+                durable: false
+            });
+            ch.assertQueue(queue, { durable: true }, function(err, _ok) {
+                if (closeOnErr(err)) return;
+                // Consume incoming messages
+                // channel.bindQueue(q.queue, exchange, key);
+                ch.consume(queue, processMsg, { noAck: false });
+                // socket.emit("message", processMsg);
+                console.log("[AMQP] Worker is started");
+            });
+            function processMsg(msg) {
+                // Process incoming messages and send them to fnConsumer
+                // Here we need to send a callback(true) for acknowledge the message or callback(false) for reject them
+                console.log(msg.content.toString());
+                io.emit(socketChannel, msg.content.toString());
                 fnConsumer(msg, function(ok) {
                     try {
                         ok ? ch.ack(msg) : ch.reject(msg, true);
@@ -83,6 +130,28 @@ module.exports = {
           console.log("[AMQP] Publisher started");
       });
     },
+    PublishMessageV2: (exchange, key, content, options = {}) => {
+        // Verify if pubchannel is started
+        if (!pubChannel) {
+            console.error("[AMQP] Can't publish message. Publisher is not initialized. You need to initialize them with StartPublisher function");
+            return;
+        }
+        // convert string message in buffer
+        const message = Buffer.from(content, "utf-8");
+        pubChannel.assertExchange(exchange, 'topic', {
+            durable: false
+        });
+        pubChannel.publish(exchange, key, message);
+        console.log("[AMQP] Worker is started");
+        console.log("[AMQP] message delivered");
+        // pubChannel.assertQueue(queue, { durable: true }, function(err, _ok) {
+        //     if (closeOnErr(err)) return;
+        //     // Consume incoming messages
+        //     pubChannel.sendToQueue(queue, message, options);
+        //     console.log("[AMQP] Worker is started");
+        //     console.log("[AMQP] message delivered");
+        // });
+    },
     PublishMessage: (queue, content, options = {}) => {
         // Verify if pubchannel is started
         if (!pubChannel) {
@@ -91,13 +160,19 @@ module.exports = {
         }
         // convert string message in buffer
         const message = Buffer.from(content, "utf-8");
-        pubChannel.assertQueue(queue, { durable: true }, function(err, _ok) {
-            if (closeOnErr(err)) return;
-            // Consume incoming messages
-            pubChannel.sendToQueue(queue, message, options);
-            console.log("[AMQP] Worker is started");
-            console.log("[AMQP] message delivered");
+        pubChannel.assertExchange(exchange, 'topic', {
+            durable: false
         });
+        pubChannel.publish(exchange, key, message);
+        console.log("[AMQP] Worker is started");
+        console.log("[AMQP] message delivered");
+        // pubChannel.assertQueue(queue, { durable: true }, function(err, _ok) {
+        //     if (closeOnErr(err)) return;
+        //     // Consume incoming messages
+        //     pubChannel.sendToQueue(queue, message, options);
+        //     console.log("[AMQP] Worker is started");
+        //     console.log("[AMQP] message delivered");
+        // });
     }
 };
 

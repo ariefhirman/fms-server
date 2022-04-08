@@ -3,7 +3,15 @@ const app = express();
 const httpServer = require("http").createServer(app);
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const io = require('socket.io')(httpServer);
+// const io = require('socket.io')(httpServer, {
+//   cors: {
+//     origin: "http://localhost:6868",
+//     methods: ["GET", "POST"],
+//     transports: ['websocket', 'polling'],
+//     credentials: true
+//   },
+//   allowEIO3: true
+// });
 
 const service = require('./src/service/conn');
 const dbConfig = require("./src/config/db.config");
@@ -116,8 +124,12 @@ function startServer() {
   });
 
   // simple route
-  app.get("/", (req, res) => {
-    res.json({ message: "Testing for User JWT API." });
+  // app.get("/", (req, res) => {
+  //   res.json({ message: "Testing for User JWT API." });
+  // });
+
+  app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
   });
 
   app.use('/static', express.static('public'))
@@ -127,13 +139,12 @@ function startServer() {
   require('./src/routes/mission.routes')(app);
 
   // socket.io
-  io.on('connection', function(socket){
-    sock = socket;
-    console.log('socket connected');
-  });
+  // io.on('connection', function(socket){
+  //   sock = socket;
+  // });
 
   // start RabbitMQ and Socket service
-  service.startService(sock);
+  service.startService(httpServer);
 
   // set port, listen for requests
   const PORT = process.env.PORT || 6868;

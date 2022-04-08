@@ -2,6 +2,8 @@ const { config } = require("../models");
 const db = require("../models");
 const Config = db.config;
 
+let droneAmount = 0
+
 exports.findAll = (req, res) => {
   Config.find()
     .then(data => {
@@ -130,3 +132,10 @@ exports.create = (req, res) => {
       });
     });
 };
+
+exports.startMission = (req, res) => {
+  droneAmount = req.body.drone_amount;
+  console.log(droneAmount);
+}
+
+exports.droneAmount = droneAmount
