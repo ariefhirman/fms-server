@@ -9,7 +9,7 @@ const prod_detection = new Schema({
 
 const detectionSchema = new Schema({
   id: String,
-  mission_id: String,
+  location_id: String,
   rack_id: String,
   date: String,
   status: Number,

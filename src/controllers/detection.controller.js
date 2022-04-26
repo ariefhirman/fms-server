@@ -5,9 +5,11 @@ const handler = require("../handler/detection.handler");
 exports.findAll = (req, res) => {
   Data.find().lean()
     .then(data => {
+        logger.info("[FindAll][Detection] Detection found")
         let parsedData = handler.parseDetectionData(data)
         res.send(parsedData);
     }).catch(err => {
+        logger.error("[FindAll][Detection] Detection data not found")
         res.status(500).send({
             message: err.message || "Some error occurred while retrieving notes."
         });
@@ -18,40 +20,48 @@ exports.findByMissionID = (req, res) => {
     Data.find({ mission_id: req.body.mission_id })
     .then(data => {
         if(!data) {
+            logger.error("[FindByMissionID][Detection] Detection not found")
             return res.status(404).send({
                 message: "Mission not found: " + req.body.mission_id
             });            
         }
+        logger.info("[FindByMissionID][Detection] Detection found")
         res.send(data);
     }).catch(err => {
         if(err.kind === 'ObjectId') {
+            logger.error("[FindByMissionID][Detection] Detection not found")
             return res.status(404).send({
                 message: "Mission not found with mission id " + req.body.mission_id
             });                
         }
+        logger.error("[FindByMissionID][Detection] Detection not found")
         return res.status(500).send({
             message: "Error retrieving Data with mission id " + req.body.mission_id
         });
     });
 };
 
-exports.findByRacks = (req, res) => {  
-  Data.find({ rack_id: req.params.rack_id })
+exports.findByLocations = (req, res) => {  
+  Data.find({ location_id: req.params.location_id })
   .then(data => {
       if(!data) {
+        logger.error("[FindByLocations][Detection] Detection not found")
           return res.status(404).send({
-              message: "Rack not found " + req.params.rack_id
+              message: "Rack not found " + req.params.location_id
           });            
       }
+      logger.info("[FindByLocations][Detection] Detection found")
       res.send(data);
   }).catch(err => {
       if(err.kind === 'ObjectId') {
-          return res.status(404).send({
-              message: "Rack not found with id " + req.params.rack_id
-          });                
+        logger.error("[FindByLocations][Detection] Detection not found with id " + req.params.location_id)
+        return res.status(404).send({
+          message: "Rack not found with id " + req.params.location_id
+        });                
       }
+      logger.error("[FindByLocations][Detection] Detection not found")
       return res.status(500).send({
-          message: "Error retrieving Rack with id " + req.params.rack_id
+          message: "Error retrieving Rack with id " + req.params.location_id
       });
   });
 };
@@ -60,19 +70,23 @@ exports.findByStatus = (req, res) => {
   Data.find({ status: req.params.status_detection })
   .then(data => {
       if(!data) {
+        logger.error("[FindByStatus][Detection] Detection not found with status: " + req.params.status_detection)
           return res.status(404).send({
-              message: "Not found: " + req.params.status
+              message: "Not found: " + req.params.status_detection
           });            
       }
+      logger.info("[FindByStatus][Detection] Detection found")
       res.send(data);
   }).catch(err => {
       if(err.kind === 'ObjectId') {
+        logger.error("[FindByStatus][Detection] Detection not found")
           return res.status(404).send({
-              message: "Not found: " + req.params.status
+              message: "Not found: " + req.params.status_detection
           });                
       }
+      logger.error("[FindByStatus][Detection] Detection not found")
       return res.status(500).send({
-          message: "Error retrieving data with status: " + req.params.status
+          message: "Error retrieving data with status: " + req.params.status_detection
       });
   });
 };
@@ -81,26 +95,30 @@ exports.findByDate = (req, res) => {
   Data.find({ date: req.params.date })
   .then(data => {
       if(!data) {
+        logger.error("[FindByDate][Detection] Detection not found with date: " + req.params.date)
           return res.status(404).send({
               message: "Not found: " + req.params.date
           });            
       }
+      logger.info("[FindByDate][Detection] Detection found")
       res.send(data);
   }).catch(err => {
       if(err.kind === 'ObjectId') {
+        logger.error("[FindByDate][Detection] Detection not found")
           return res.status(404).send({
               message: "Not found: " + req.params.date
           });                
       }
+      logger.error("[FindByDate][Detection] Detection not found")
       return res.status(500).send({
           message: "Error retrieving data with date: " + req.params.date
       });
   });
 };
 
-exports.deleteByRacks = (req, res) => {
-  const id = req.body.rack_id;
-  Data.deleteMany({ rack_id:id })
+exports.deleteByLocation = (req, res) => {
+  const id = req.body.location_id;
+  Data.deleteMany({ location_id:id })
     .then(data => {
     if (!data) {
         res.status(404).send({
@@ -141,6 +159,7 @@ exports.deleteAllData = (req, res) => {
 
 exports.create = (req, res) => {
   if (!req.body.id) {
+    logger.error("[Create][Detection] Can't create detection with empty ID")
     res.status(400).send({ message: "Content can not be empty!" });
     return;
   }
@@ -148,7 +167,7 @@ exports.create = (req, res) => {
   const newData = new Data({
     id: req.body.id,
     mission_id: req.body.mission_id,
-    rack_id: req.body.rack_id,
+    location_id: req.body.location_id,
     date: req.body.date,
     status: req.body.status,
     product_detection: req.body.product_detection
@@ -158,12 +177,13 @@ exports.create = (req, res) => {
   newData
     .save(newData)
     .then(data => {
-      res.send(data);
+        logger.error("[Create][Detection] Success create data")
+        res.send(data);
     })
     .catch(err => {
-      res.status(500).send({
-        message:
-          err.message || "Some error occurred while creating the detection data."
-      });
+        logger.error("[Create][Detection] Unable to create data")
+        res.status(500).send({
+            message: err.message || "Some error occurred while creating the detection data."
+        });
     });
 };

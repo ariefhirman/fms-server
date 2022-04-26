@@ -1,6 +1,7 @@
 const config = require("../config/auth.config");
 const db = require("../models");
 const User = db.user;
+const logger = require("../logger/logger");
 // const Role = db.role;
 
 var jwt = require("jsonwebtoken");
@@ -17,6 +18,7 @@ exports.signup = (req, res) => {
   });
 
   if (req.body.username == "" || req.body.password == "") {
+    logger.error("[Signup] Error username and password is empty")
     res.status(500).send({ message: "Username and password must not be empty" });
   }
 
