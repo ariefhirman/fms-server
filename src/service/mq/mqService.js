@@ -53,14 +53,12 @@ module.exports = {
                 // Consume incoming messages
                 ch.bindQueue("drone_name", exchange, "drone_name");
                 ch.consume("drone_name", processMsg, { noAck: false });
-                // socket.emit("message", processMsg);
                 console.log("[AMQP] Worker is started");
             });
             function processMsg(msg) {
                 // Process incoming messages and send them to fnConsumer
                 // Here we need to send a callback(true) for acknowledge the message or callback(false) for reject them
                 console.log(msg.content.toString());
-                // io.emit(socketChannel, msg.content.toString());
                 getDroneConsumer(msg, function(ok) {
                     try {
                         ok ? ch.ack(msg) : ch.reject(msg, true);
@@ -92,7 +90,7 @@ module.exports = {
             ch.assertQueue(queue, { durable: true }, function(err, _ok) {
                 if (closeOnErr(err)) return;
                 // Consume incoming messages
-                // channel.bindQueue(q.queue, exchange, key);
+                channel.bindQueue(queue, exchange, key);
                 ch.consume(queue, processMsg, { noAck: false });
                 // socket.emit("message", processMsg);
                 console.log("[AMQP] Worker is started");

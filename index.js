@@ -3,21 +3,10 @@ const app = express();
 const httpServer = require("http").createServer(app);
 const bodyParser = require("body-parser");
 const cors = require("cors");
-// const io = require('socket.io')(httpServer, {
-//   cors: {
-//     origin: "http://localhost:6868",
-//     methods: ["GET", "POST"],
-//     transports: ['websocket', 'polling'],
-//     credentials: true
-//   },
-//   allowEIO3: true
-// });
 
 const service = require('./src/service/conn');
 const dbConfig = require("./src/config/db.config");
-const multer = require("multer");
-const path = require("path");
-const fs = require('fs-extra');
+
 require("dotenv").config();
 // const path = "mongodb+srv://username:password@ipaddress:port/dbname?retryWrites=true&w=majority";
 
@@ -28,8 +17,6 @@ var corsOptions = {
   preflightContinue: true,
   maxAge: 600
 };
-
-var sock = null;
 
 function startServer() {
   app.options('*', cors(corsOptions));
@@ -72,76 +59,14 @@ function startServer() {
     process.exit();
   });
 
-  const storage = multer.diskStorage({
-    destination: function(req, file, callback) {
-      callback(null, './uploads');
-    },
-    filename: function (req, file, callback) {
-      callback(null, file.originalname);
-      // + path.extname(file.originalname)
-    }
-  });
-
-  var upload = multer({ 
-      storage: storage
-  })
-
-  app.post('/api/v1/upload', upload.single('file'), (req, res) => {
-    if (!req.file) {
-      console.log("No file received");
-      return res.send({
-        success: false
-      });
-
-    } else {
-      let date = getDateNow();
-      var fileName = req.file.filename;
-      const filesDir = './public/images/' + req.body.racks + '/' + date;
-      // console.log('file received');
-      
-      if (fs.existsSync(filesDir + '/' + fileName)) {
-        fs.unlink(filesDir + '/' + fileName, (err) => {
-            if (err) {
-                console.log(err);
-                return res.send({
-                  success: false,
-                  error: err
-                })
-            }
-            // console.log('deleted');
-        })
-      }
-      
-      fs.move('./uploads/' + fileName, filesDir + '/' + fileName, function (err) {
-          if (err) {
-              return console.error(err);
-          }
-      });
-      return res.send({
-        success: true
-      })
-    }
-  });
-
-  // simple route
-  // app.get("/", (req, res) => {
-  //   res.json({ message: "Testing for User JWT API." });
-  // });
-
-  app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-  });
-
+  // static serving for image
   app.use('/static', express.static('public'))
 
+  // routing of each module
   require('./src/routes/auth.routes')(app);
   require('./src/routes/detection.routes')(app);
   require('./src/routes/mission.routes')(app);
-
-  // socket.io
-  // io.on('connection', function(socket){
-  //   sock = socket;
-  // });
+  require('./src/routes/upload.routes')(app);
 
   // start RabbitMQ and Socket service
   service.startService(httpServer);
@@ -151,25 +76,6 @@ function startServer() {
   httpServer.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}.`);
   });
-}
-
-function getDateNow() {
-  let today = new Date();
-  let dd = today.getDate();
-  let mm = today.getMonth()+1; 
-  let yyyy = today.getFullYear();
-  
-  if(dd<10) 
-  {
-      dd='0'+dd;
-  } 
-
-  if(mm<10) 
-  {
-      mm='0'+mm;
-  }
-
-  return dd + '-' + mm + '-' + yyyy
 }
 
 startServer();

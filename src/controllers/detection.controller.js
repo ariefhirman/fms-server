@@ -1,6 +1,7 @@
 const db = require("../models");
 const Data = db.data;
 const handler = require("../handler/detection.handler");
+const logger = require("../logger/logger");
 
 exports.findAll = (req, res) => {
   Data.find().lean()
