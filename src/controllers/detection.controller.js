@@ -1,6 +1,6 @@
 const db = require("../models");
 const Data = db.data;
-const handler = require("../handler/detection.handler");
+const utils = require("../utils/detection.utils");
 const logger = require("../logger/logger");
 
 exports.findAll = (req, res) => {
@@ -43,7 +43,7 @@ exports.findByMissionID = (req, res) => {
 };
 
 exports.findByLocations = (req, res) => {  
-  Data.find({ location_id: req.params.location_id })
+  Data.find({ rack_id: req.params.location_id })
   .then(data => {
       if(!data) {
         logger.error("[FindByLocations][Detection] Detection not found")

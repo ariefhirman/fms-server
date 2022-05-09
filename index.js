@@ -4,7 +4,7 @@ const httpServer = require("http").createServer(app);
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
-const service = require('./src/service/conn');
+const service = require('./src/connection/conn');
 const dbConfig = require("./src/config/db.config");
 
 require("dotenv").config();
