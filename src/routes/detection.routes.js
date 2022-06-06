@@ -16,7 +16,7 @@ module.exports = function(app) {
   // get all data
   app.get("/api/v1/detection", controller.findAll)
   // get data by missionID
-  app.get("/api/v1/detection/mission", controller.findByMissionID)
+  app.get("/api/v1/detection/mission/:mission_id", controller.findByMissionID)
   // get data based on rack
   app.get("/api/v1/detection/loc/:location_id", controller.findByLocations)
   // get data based on date

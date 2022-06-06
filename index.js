@@ -32,20 +32,6 @@ function startServer() {
 
   const db = require("./src/models");
 
-  // db.mongoose
-  //   .connect(path, {
-  //     useNewUrlParser: true,
-  //     useUnifiedTopology: true
-  //   })
-  //   .then(() => {
-  //     console.log("Successfully connect to MongoDB.");
-  //     initial();
-  //   })
-  //   .catch(err => {
-  //     console.error("Connection error", err);
-  //     process.exit();
-  //   });
-
   db.mongoose
   .connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`, {
     useNewUrlParser: true,

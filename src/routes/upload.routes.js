@@ -1,6 +1,5 @@
 const controller = require("../controllers/upload.controller");
 const multer = require("multer");
-const path = require("path");
 
 const storage = multer.diskStorage({
   destination: function(req, file, callback) {
@@ -28,4 +27,5 @@ module.exports = function(app) {
 
   // Upload image detection
   app.post('/api/v1/upload', upload.single('file') ,controller.upload);
+  app.post('/api/v1/upload/map', upload.single('file'), controller.uploadMap);
 };

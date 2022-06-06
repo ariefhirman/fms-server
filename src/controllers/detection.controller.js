@@ -7,7 +7,7 @@ exports.findAll = (req, res) => {
   Data.find().lean()
     .then(data => {
         logger.info("[FindAll][Detection] Detection found")
-        let parsedData = handler.parseDetectionData(data)
+        let parsedData = utils.parseDetectionData(data)
         res.send(parsedData);
     }).catch(err => {
         logger.error("[FindAll][Detection] Detection data not found")
@@ -18,7 +18,7 @@ exports.findAll = (req, res) => {
 };
 
 exports.findByMissionID = (req, res) => {  
-    Data.find({ mission_id: req.body.mission_id })
+    Data.find({ mission_id: req.params.mission_id })
     .then(data => {
         if(!data) {
             logger.error("[FindByMissionID][Detection] Detection not found")
